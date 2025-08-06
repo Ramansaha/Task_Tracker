@@ -1,7 +1,7 @@
 // InsertOne data to the database
 export const create = async (model, data) => {
     try {
-        const result = await model.create(data).lean();
+        const result = await model.create(data);
         if (!result) {
             return { status: false, message: 'Data not created' };
         }
