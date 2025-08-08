@@ -20,6 +20,20 @@ export default function Signup({ setToken }) {
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setMessageType("error");
+      setMessage("Please enter a valid email address!");
+      return;
+    }
+
+    const mobileRegex = /^\d{10}$/;
+    if (!mobileRegex.test(mobile)) {
+      setMessageType("error");
+      setMessage("Please enter a valid 10-digit mobile number!");
+      return;
+    }
+
     try {
       const res = await fetch("/api/taskTrac/auth/register", {
         method: "POST",

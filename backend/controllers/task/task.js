@@ -6,6 +6,9 @@ import * as apiResponse from '../../helper/apiResponse.js';
 export const createTask = async (request, response) => {
     try {
         const { title, dueDate , auth} = request.body;
+        if(!title || !dueDate) {
+            return apiResponse.validationErrorWithData(response, "Title and due date are required");
+        }   
         const newTask = await Task.create({
             title,
             dueDate,
@@ -30,6 +33,9 @@ export const getTasks = async (req, res) => {
 // Get single task
 export const getTask = async (req, res) => {
     try {
+        if (!req.params.id) {
+            return res.status(400).json({ message: "Task ID is required" });
+        }
         const task = await Task.findOne({ _id: req.params.id, userId: req.user._id });
         if (!task) return res.status(404).json({ message: "Task not found" });
         res.json(task);
@@ -41,6 +47,9 @@ export const getTask = async (req, res) => {
 // Update task
 export const updateTask = async (req, res) => {
     try {
+        if (!req.params.id || req.body.completed === undefined) {
+            return res.status(400).json({ message: "Task ID and task status are required" });
+        }   
         const updated = await Task.findOneAndUpdate(
             { _id: req.params.id, userId: req.body.auth.userId },
             req.body,
@@ -56,6 +65,9 @@ export const updateTask = async (req, res) => {
 // Delete task
 export const deleteTask = async (req, res) => {
     try {
+        if (!req.params.id) {
+            return res.status(400).json({ message: "Task ID is required" });
+        }
         const deleted = await Task.findOneAndDelete({ _id: req.params.id, userId: req.body.auth.userId });
         if (!deleted) return res.status(404).json({ message: "Task not found" });
         res.json({ message: "Task deleted" });

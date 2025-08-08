@@ -47,6 +47,9 @@ export const generateAuthToken = async (request, response, next) => {
 export const login = async (request, response) => {
     try {
         const { token , password, authUser} = request.body;
+        if(!password) {
+            return apiResponse.validationErrorWithData(response, "Password is required");
+        }
         if (!token) {
             return apiResponse.unAuthorizedResponse(response,
                 'Authentication token required');
@@ -66,6 +69,11 @@ export const login = async (request, response) => {
 // Register user
 export const register = async (request, response, next) => {
     try {
+        const { name, email, mobile, password } = request.body;
+        if (!name || !email || !mobile || !password) {  
+            return apiResponse.validationError(response, "All fields are required");
+        }
+
         const res = await create(User, request.body);
 
         if (!res.status) {
@@ -87,7 +95,7 @@ export const register = async (request, response, next) => {
 export const getAuthUser = async (request, response, next) => {
     try {
         let body = request.body
-        // if(!body?.email || !body?.mobile) return apiResponse.notFoundResponse(response, "PLease provide either an email or a mobile number")
+        if(!body?.mobile) return apiResponse.notFoundResponse(response, "Please provide a mobile number")
         const query = body.mobile ? { mobile: body.mobile } : body.email ? { email: body.email } : null
         const authUser = await getOne(User,query)
         if (!authUser.status) return next()
