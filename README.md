@@ -42,7 +42,7 @@ task-tracker/
 | Frontend | Backend | Database | Auth |
 |----------|---------|----------|------|
 | React (Hooks) | Node.js | MongoDB (Mongoose) | JWT |
-| React Router | Express.js | MongoDB Atlas (or local) | bcryptjs |
+| React Router | Express.js | MongoDB Atlas (or local) | |
 | Tailwind CSS | CORS & dotenv |  | |
 
 ---
