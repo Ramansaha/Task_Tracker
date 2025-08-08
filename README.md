@@ -42,7 +42,7 @@ task-tracker/
 | Frontend | Backend | Database | Auth |
 |----------|---------|----------|------|
 | React (Hooks) | Node.js | MongoDB (Mongoose) | JWT |
-| React Router | Express.js | MongoDB Atlas (or local) | bcryptjs |
+| React Router | Express.js | MongoDB Atlas (or local) | |
 | Tailwind CSS | CORS & dotenv |  | |
 
 ---
@@ -54,7 +54,7 @@ Follow these steps to set up the project locally.
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/task-tracker.git
+git clone https://github.com/Ramansaha/task-tracker.git
 cd task-tracker
 
 ## 🧪 2. Configure Environment Variables
