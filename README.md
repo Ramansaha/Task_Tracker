@@ -63,8 +63,8 @@ Create a `.env` file inside the `/backend` directory and add the following:
 
 ```env
 PORT=8000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
+MONGO_URI=your_mongodb_connection_string // eg:- mongodb://localhost:27017/tasktracker
+AUTHTOKEN_SECRETKEY=your_jwt_secret  // eg:- abcacease
 ```
 
 > ⚠️ Replace `your_mongodb_connection_string` and `your_jwt_secret` with your actual values.
