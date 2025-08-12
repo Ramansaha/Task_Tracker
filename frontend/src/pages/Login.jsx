@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function Login({ setToken }) {
-  const [mobile, setMobile] = useState("9835343348");
-  const [password, setPassword] = useState("raman@123");
+  const [mobile, setMobile] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const navigate = useNavigate();

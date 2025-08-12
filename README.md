@@ -76,7 +76,7 @@ AUTHTOKEN_SECRETKEY=your_jwt_secret  // eg:- abcacease
 ```bash
 cd backend
 npm install
-npm start
+npm start || npm run dev
 ```
 
 - The backend will run on `http://localhost:8000`.
@@ -96,7 +96,7 @@ npm install
 ## ▶️ 5. Start the Frontend Server
 
 ```bash
-npm start
+npm run dev
 ```
 
 - The frontend will run on `http://localhost:3000`.
