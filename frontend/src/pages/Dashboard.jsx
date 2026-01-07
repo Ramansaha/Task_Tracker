@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ConfirmationModal from "../components/ConfirmationModal";
+import AddTaskModal from "../components/AddTaskModal";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -7,13 +9,15 @@ export default function Dashboard() {
 
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
-  const [title, setTitle] = useState("");
-  const [dueDate, setDueDate] = useState("");
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [taskIdToDelete, setTaskIdToDelete] = useState(null);
+  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const [expandedTaskId, setExpandedTaskId] = useState(null);
 
   useEffect(() => {
     if (!token) {
@@ -78,17 +82,7 @@ export default function Dashboard() {
     setFilteredTasks(tempTasks);
   };
 
-  const handleAddTask = async (e) => {
-    e.preventDefault();
-    if (!dueDate) {
-      setMessageType("error");
-      setMessage("Date is required!");
-      setTimeout(() => {
-        setMessage("");
-        setMessageType("");
-      }, 3000);
-      return;
-    }
+  const handleAddTask = async (taskData) => {
     try {
       const res = await fetch("/api/taskTrac/task/add", {
         method: "POST",
@@ -96,14 +90,18 @@ export default function Dashboard() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ title, dueDate }),
+        body: JSON.stringify({
+          title: taskData.title,
+          description: taskData.description,
+          startDate: taskData.startDate,
+          endDate: taskData.endDate,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
-        setTitle("");
-        setDueDate("");
         fetchTasks();
         showMessage(data.message || "Task added successfully", "success");
+        setIsAddTaskModalOpen(false);
       } else {
         showMessage(data.message || "Failed to add task", "error");
       }
@@ -130,12 +128,16 @@ export default function Dashboard() {
     }
   };
 
-  const handleDelete = async (taskId) => {
-    const confirmDelete = window.confirm("Delete this task?");
-    if (!confirmDelete) return;
+  const handleDeleteClick = (taskId) => {
+    setTaskIdToDelete(taskId);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!taskIdToDelete) return;
 
     try {
-      const res = await fetch(`/api/taskTrac/task/delete/${taskId}`, {
+      const res = await fetch(`/api/taskTrac/task/delete/${taskIdToDelete}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -149,7 +151,19 @@ export default function Dashboard() {
       }
     } catch (err) {
       showMessage("Error deleting task", "error");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setTaskIdToDelete(null);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setIsDeleteModalOpen(false);
+    setTaskIdToDelete(null);
+  };
+
+  const toggleTaskExpand = (taskId) => {
+    setExpandedTaskId((prev) => (prev === taskId ? null : taskId));
   };
 
   const handleLogout = () => {
@@ -161,39 +175,21 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">My Tasks</h1>
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
-        >
-          Logout
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setIsAddTaskModalOpen(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+          >
+            Create New Task
+          </button>
+          <button
+            onClick={handleLogout}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+          >
+            Logout
+          </button>
+        </div>
       </div>
-
-      <form
-        onSubmit={handleAddTask}
-        className="bg-white p-4 rounded-lg shadow mb-4 flex gap-4"
-      >
-        <input
-          type="text"
-          placeholder="Task title..."
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-indigo-300"
-          required
-        />
-        <input
-          type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          className="px-4 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-indigo-300"
-        />
-        <button
-          type="submit"
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
-        >
-          Add
-        </button>
-      </form>
 
       {message && (
         <div className={`mb-4 px-4 py-2 border rounded ${getMessageStyle()}`}>
@@ -234,24 +230,39 @@ export default function Dashboard() {
       {loading ? (
         <p className="text-center text-gray-600">Loading...</p>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filteredTasks.length > 0 ? (
             filteredTasks.map((task) => (
               <div
                 key={task._id}
-                className="bg-white p-4 rounded-lg shadow flex justify-between items-center"
+                className="bg-white p-3 rounded-lg shadow flex justify-between items-start"
               >
-                <div>
+                <div
+                  className="flex-1 cursor-pointer"
+                  onClick={() => toggleTaskExpand(task._id)}
+                >
                   <h2
-                    className={`text-lg font-medium ${
+                    className={`text-base font-medium ${
                       task.completed && filter !== "completed" ? "line-through text-gray-400" : "text-gray-800"
                     }`}
                   >
                     {task.title}
                   </h2>
-                  {task.dueDate && (
-                    <p className="text-sm text-gray-500">
-                      Due: {new Date(task.dueDate).toLocaleDateString()}
+                  <div className="flex gap-4 mt-2">
+                    {task.startDate && (
+                      <p className="text-sm text-gray-500">
+                        Start: {new Date(task.startDate).toLocaleDateString()}
+                      </p>
+                    )}
+                    {task.endDate && (
+                      <p className="text-sm text-gray-500">
+                        End: {new Date(task.endDate).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                  {expandedTaskId === task._id && task.description && (
+                    <p className="mt-1 text-sm text-gray-600">
+                      {task.description}
                     </p>
                   )}
                 </div>
@@ -267,7 +278,7 @@ export default function Dashboard() {
                     {task.completed ? "Undo" : "Complete"}
                   </button>
                   <button
-                    onClick={() => handleDelete(task._id)}
+                    onClick={() => handleDeleteClick(task._id)}
                     className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg"
                   >
                     Delete
@@ -280,6 +291,20 @@ export default function Dashboard() {
           )}
         </div>
       )}
+
+      <AddTaskModal
+        isOpen={isAddTaskModalOpen}
+        onClose={() => setIsAddTaskModalOpen(false)}
+        onSave={handleAddTask}
+      />
+
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        message="Do you want to delete this task?"
+        title="Delete Task"
+      />
     </div>
   );
 }

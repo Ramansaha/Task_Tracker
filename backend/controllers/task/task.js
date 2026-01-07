@@ -4,20 +4,32 @@ import * as apiResponse from '../../helper/apiResponse.js';
 
 // Create task
 export const createTask = async (request, response) => {
-    try {
-        const { title, dueDate , auth} = request.body;
-        if(!title || !dueDate) {
-            return apiResponse.validationErrorWithData(response, "Title and due date are required");
-        }   
-        const newTask = await Task.create({
-            title,
-            dueDate,
-            userId: auth.userId// from JWT middleware
-        });
-        return apiResponse.successResponseWithData(response, "Task created successfully", newTask);
-    } catch (err) {
-        return apiResponse.errorResponse(response, "Failed to create task");
+  try {
+    const { title, description, startDate, endDate } = request.body;
+
+    if (!title || !startDate || !endDate) {
+      return apiResponse.validationErrorWithData(
+        response,
+        "Title, start date and end date are required"
+      );
     }
+
+    const newTask = await Task.create({
+      title,
+      description: description || "",
+      startDate,
+      endDate,
+      userId: request.body?.auth?.userId, // from JWT middleware
+    });
+
+    return apiResponse.successResponseWithData(
+      response,
+      "Task created successfully",
+      newTask
+    );
+  } catch (err) {
+    return apiResponse.errorResponse(response, "Failed to create task");
+  }
 };
 
 // Get all tasks for logged-in user
