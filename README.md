@@ -56,50 +56,76 @@ Follow these steps to set up the project locally.
 ```bash
 git clone https://github.com/Ramansaha/task-tracker.git
 cd task-tracker
-
-## 🧪 2. Configure Environment Variables
-
-Create a `.env` file inside the `/backend` directory and add the following:
-
-```env
-PORT=8000
-MONGO_URI=your_mongodb_connection_string // eg:- mongodb://localhost:27017/tasktracker
-AUTHTOKEN_SECRETKEY=your_jwt_secret  // eg:- abcacease
 ```
-
-> ⚠️ Replace `your_mongodb_connection_string` and `your_jwt_secret` with your actual values.
 
 ---
 
-## ▶️ 3. Start the Backend Server
+## 🐳 Docker Setup (Recommended)
+
+### 2a. Configure Environment Variables
+
+Create a `.env` file in the project root with all required variables:
+
+```env
+MONGO_ROOT_USERNAME=root
+MONGO_ROOT_PASSWORD=your_secure_password_here
+MONGO_DATABASE=tasktracker
+MONGO_PORT=27018
+MONGO_URI=mongodb://root:your_secure_password_here@mongo:27017/tasktracker?authSource=admin
+PORT=8000
+AUTHTOKEN_SECRETKEY=your_jwt_secret_key_here
+```
+
+### 2b. Start with Docker Compose
+
+```bash
+docker compose up -d
+```
+
+This will start:
+- MongoDB on port `27018` (or the port you specified)
+- Backend API on port `8000`
+
+### 2c. Connect to MongoDB
+
+Use MongoDB Compass with:
+```
+mongodb://root:your_secure_password_here@localhost:27018/admin?authSource=admin
+```
+
+---
+
+## 💻 Local Development Setup
+
+### 2. Configure Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+PORT=8000
+MONGO_URI=mongodb://localhost:27017/tasktracker
+AUTHTOKEN_SECRETKEY=your_jwt_secret_key_here
+```
+
+### 3. Start the Backend Server
 
 ```bash
 cd backend
 npm install
-npm start || npm run dev
+npm start
 ```
 
-- The backend will run on `http://localhost:8000`.
-- Make sure MongoDB is running locally or you have connected to MongoDB Atlas.
+Backend runs on `http://localhost:8000`
 
----
-
-## 🌐 4. Setup Frontend (React)
+### 4. Setup Frontend
 
 ```bash
-cd ../frontend
+cd frontend
 npm install
-```
-
----
-
-## ▶️ 5. Start the Frontend Server
-
-```bash
 npm run dev
 ```
 
-- The frontend will run on `http://localhost:3000`.
+Frontend runs on `http://localhost:5173`
 
 ---
 
