@@ -42,7 +42,7 @@ export default function Dashboard() {
       } else {
         showMessage(data.message || "Failed to load tasks", "error");
       }
-    } catch (_err) {
+    } catch {
       showMessage("Something went wrong while loading tasks.", "error");
     } finally {
       setLoading(false);
@@ -105,7 +105,7 @@ export default function Dashboard() {
       } else {
         showMessage(data.message || "Failed to add task", "error");
       }
-    } catch (_err) {
+    } catch {
       showMessage("Error adding task", "error");
     }
   };
@@ -123,7 +123,7 @@ export default function Dashboard() {
       if (res.ok) {
         fetchTasks();
       }
-    } catch (_err) {
+    } catch {
       showMessage("Error updating task", "error");
     }
   };
@@ -149,7 +149,7 @@ export default function Dashboard() {
       } else {
         showMessage("Failed to delete task", "error");
       }
-    } catch (_err) {
+    } catch {
       showMessage("Error deleting task", "error");
     } finally {
       setIsDeleteModalOpen(false);

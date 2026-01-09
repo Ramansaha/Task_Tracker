@@ -35,7 +35,7 @@ export default function Login({ setToken }) {
         setMessageType("error");
         setMessage(data.message || "Login failed. Please try again.");
       }
-    } catch (_err) {
+    } catch {
       setMessageType("error");
       setMessage("Something went wrong. Please try again later.");
     }
