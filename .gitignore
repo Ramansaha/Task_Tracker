@@ -25,3 +25,5 @@ logs/
 dist/
 build/
 
+.husky/_/
+

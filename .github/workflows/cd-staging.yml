@@ -1,0 +1,21 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [staging]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to staging environment
+        run: |
+          echo "✅ Code merged to staging branch"
+          echo "🚀 Ready to deploy to staging environment"
+          # Add your deployment commands here
+

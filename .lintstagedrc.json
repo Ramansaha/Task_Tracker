@@ -1,0 +1,9 @@
+{
+  "frontend/**/*.{js,jsx}": [
+    "cd frontend && npm run lint -- --fix"
+  ],
+  "backend/**/*.js": [
+    "cd backend && npm run lint -- --fix"
+  ]
+}
+
