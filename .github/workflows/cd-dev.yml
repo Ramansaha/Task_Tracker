@@ -1,0 +1,22 @@
+name: Deploy to Dev
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to dev environment
+        run: |
+          echo "✅ Code merged to dev branch"
+          echo "🚀 Ready to deploy to dev environment"
+          # Add your deployment commands here
+          # Example: docker-compose up -d --build
+

@@ -104,6 +104,6 @@ export const somethingResponse = function (res, info) {
     return res.status(400).json(responseData)
 }
 
-function logResponse(responseData) {
+function logResponse(_responseData) {
     console.error('==========================================================\n')
 }

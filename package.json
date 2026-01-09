@@ -1,0 +1,12 @@
+{
+  "name": "task-tracker-root",
+  "private": true,
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0"
+  }
+}
+
