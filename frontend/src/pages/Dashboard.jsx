@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ConfirmationModal from "../components/ConfirmationModal";
 import AddTaskModal from "../components/AddTaskModal";
@@ -19,18 +19,6 @@ export default function Dashboard() {
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState(null);
 
-  useEffect(() => {
-    if (!token) {
-      navigate("/");
-    } else {
-      fetchTasks();
-    }
-  }, [token]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [tasks, filter, search]);
-
   const showMessage = (text, type = "success") => {
     setMessage(text);
     setMessageType(type);
@@ -40,13 +28,7 @@ export default function Dashboard() {
     }, 3000);
   };
 
-  const getMessageStyle = () => {
-    return messageType === "success"
-      ? "bg-green-100 text-green-700 border-green-400"
-      : "bg-red-100 text-red-700 border-red-400";
-  };
-
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/taskTrac/task/list", {
@@ -60,14 +42,14 @@ export default function Dashboard() {
       } else {
         showMessage(data.message || "Failed to load tasks", "error");
       }
-    } catch (err) {
+    } catch (_err) {
       showMessage("Something went wrong while loading tasks.", "error");
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let tempTasks = [...tasks];
     if (filter === "completed") {
       tempTasks = tempTasks.filter((task) => task.completed);
@@ -80,6 +62,24 @@ export default function Dashboard() {
       );
     }
     setFilteredTasks(tempTasks);
+  }, [tasks, filter, search]);
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/");
+    } else {
+      fetchTasks();
+    }
+  }, [token, navigate, fetchTasks]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  const getMessageStyle = () => {
+    return messageType === "success"
+      ? "bg-green-100 text-green-700 border-green-400"
+      : "bg-red-100 text-red-700 border-red-400";
   };
 
   const handleAddTask = async (taskData) => {
@@ -105,7 +105,7 @@ export default function Dashboard() {
       } else {
         showMessage(data.message || "Failed to add task", "error");
       }
-    } catch (err) {
+    } catch (_err) {
       showMessage("Error adding task", "error");
     }
   };
@@ -123,7 +123,7 @@ export default function Dashboard() {
       if (res.ok) {
         fetchTasks();
       }
-    } catch (err) {
+    } catch (_err) {
       showMessage("Error updating task", "error");
     }
   };
@@ -149,7 +149,7 @@ export default function Dashboard() {
       } else {
         showMessage("Failed to delete task", "error");
       }
-    } catch (err) {
+    } catch (_err) {
       showMessage("Error deleting task", "error");
     } finally {
       setIsDeleteModalOpen(false);
