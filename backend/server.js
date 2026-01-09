@@ -1,10 +1,25 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { existsSync } from 'fs';
 import routes from './routes/apiRoutes.js'
 import connectDB from './config/conn.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Try root .env first, then fallback to backend/.env
+const rootEnvPath = join(__dirname, '../.env');
+const backendEnvPath = join(__dirname, '.env');
+
+if (existsSync(rootEnvPath)) {
+  dotenv.config({ path: rootEnvPath });
+} else {
+  dotenv.config({ path: backendEnvPath });
+}
+
 connectDB();
 const app = express();
 
