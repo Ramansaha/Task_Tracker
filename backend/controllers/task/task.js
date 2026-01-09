@@ -1,5 +1,4 @@
 import Task from "../../models/task/task.js";
-import { create , getOne} from '../../helper/mongo.js';
 import * as apiResponse from '../../helper/apiResponse.js';
 
 // Create task
@@ -27,7 +26,7 @@ export const createTask = async (request, response) => {
       "Task created successfully",
       newTask
     );
-  } catch (err) {
+  } catch {
     return apiResponse.errorResponse(response, "Failed to create task");
   }
 };
@@ -37,7 +36,7 @@ export const getTasks = async (req, res) => {
     try {
         const tasks = await Task.find({ userId: req.auth.userId });
         res.json(tasks);
-    } catch (err) {
+    } catch {
         res.status(500).json({ message: "Failed to fetch tasks" });
     }
 };
@@ -51,7 +50,7 @@ export const getTask = async (req, res) => {
         const task = await Task.findOne({ _id: req.params.id, userId: req.user._id });
         if (!task) return res.status(404).json({ message: "Task not found" });
         res.json(task);
-    } catch (err) {
+    } catch {
         res.status(500).json({ message: "Failed to fetch task" });
     }
 };
@@ -69,7 +68,7 @@ export const updateTask = async (req, res) => {
         );
         if (!updated) return res.status(404).json({ message: "Task not found" });
         res.json(updated);
-    } catch (err) {
+    } catch {
         res.status(500).json({ message: "Failed to update task" });
     }
 };
@@ -83,7 +82,7 @@ export const deleteTask = async (req, res) => {
         const deleted = await Task.findOneAndDelete({ _id: req.params.id, userId: req.body.auth.userId });
         if (!deleted) return res.status(404).json({ message: "Task not found" });
         res.json({ message: "Task deleted" });
-    } catch (err) {
+    } catch {
         res.status(500).json({ message: "Failed to delete task" });
     }
 };

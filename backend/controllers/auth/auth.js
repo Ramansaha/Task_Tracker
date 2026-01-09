@@ -23,7 +23,7 @@ export const isAuth = (request, response, next) => {
             request.body.auth = res;
         }
         return next()
-    }).catch(err => {
+    }).catch(() => {
         return response.status(401).json({ message: "Unauthorized" })
     })
 }

@@ -19,14 +19,14 @@ export default function Dashboard() {
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState(null);
 
-  const showMessage = (text, type = "success") => {
+  const showMessage = useCallback((text, type = "success") => {
     setMessage(text);
     setMessageType(type);
     setTimeout(() => {
       setMessage("");
       setMessageType("");
     }, 3000);
-  };
+  }, []);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -47,7 +47,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showMessage]);
 
   const applyFilters = useCallback(() => {
     let tempTasks = [...tasks];
