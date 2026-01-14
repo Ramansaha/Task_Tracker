@@ -17,6 +17,8 @@ export default function Dashboard() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [taskIdToDelete, setTaskIdToDelete] = useState(null);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
   const [expandedTaskId, setExpandedTaskId] = useState(null);
 
   const showMessage = useCallback((text, type = "success") => {
@@ -122,6 +124,39 @@ export default function Dashboard() {
       });
       if (res.ok) {
         fetchTasks();
+      }
+    } catch {
+      showMessage("Error updating task", "error");
+    }
+  };
+
+  const handleEditClick = (task) => {
+    setEditingTask(task);
+    setIsEditTaskModalOpen(true);
+  };
+
+  const handleUpdateTask = async (taskId, taskData) => {
+    try {
+      const res = await fetch(`/api/taskTrac/task/upadte/${taskId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: taskData.title,
+          description: taskData.description,
+          endDate: taskData.endDate,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        fetchTasks();
+        showMessage("Task updated successfully", "success");
+        setIsEditTaskModalOpen(false);
+        setEditingTask(null);
+      } else {
+        showMessage(data.message || "Failed to update task", "error");
       }
     } catch {
       showMessage("Error updating task", "error");
@@ -268,10 +303,10 @@ export default function Dashboard() {
                     </p>
                   )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
                     <button
                       onClick={() => toggleComplete(taskId, task.completed)}
-                      className={`px-3 py-1 rounded-lg text-white ${
+                      className={`px-3 py-1 rounded-lg text-white min-w-[80px] text-center ${
                         task.completed
                           ? "bg-yellow-500 hover:bg-yellow-600"
                           : "bg-green-500 hover:bg-green-600"
@@ -284,6 +319,27 @@ export default function Dashboard() {
                       className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg"
                     >
                       Delete
+                    </button>
+                    <button
+                      onClick={() => handleEditClick(task)}
+                      className="p-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition"
+                      title="Edit task"
+                      aria-label="Edit task"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLineCap="round"
+                          strokeLineJoin="round"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -299,6 +355,21 @@ export default function Dashboard() {
         isOpen={isAddTaskModalOpen}
         onClose={() => setIsAddTaskModalOpen(false)}
         onSave={handleAddTask}
+      />
+
+      <AddTaskModal
+        isOpen={isEditTaskModalOpen}
+        onClose={() => {
+          setIsEditTaskModalOpen(false);
+          setEditingTask(null);
+        }}
+        onSave={(formData) => {
+          if (!editingTask) return;
+          const taskId = editingTask.id ?? editingTask._id;
+          handleUpdateTask(taskId, formData);
+        }}
+        mode="edit"
+        initialTask={editingTask}
       />
 
       <ConfirmationModal

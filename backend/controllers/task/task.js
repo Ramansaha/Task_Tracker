@@ -79,9 +79,6 @@ export const updateTask = async (req, res) => {
         if (req.body.description !== undefined) {
             updateData.description = req.body.description;
         }
-        if (req.body.startDate !== undefined) {
-            updateData.startDate = req.body.startDate;
-        }
         if (req.body.endDate !== undefined) {
             updateData.endDate = req.body.endDate;
         }
@@ -98,10 +95,10 @@ export const updateTask = async (req, res) => {
         if (updatedCount === 0) return res.status(404).json({ message: "Task not found" });
         
         const updated = await Task.findByPk(req.params.id);
-        res.json(updated);
+        return res.json(updated);
     } catch (err) {
         console.error('Update task error:', err);
-        res.status(500).json({ message: "Failed to update task" });
+        return res.status(500).json({ message: "Failed to update task" });
     }
 };
 
