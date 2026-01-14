@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ConfirmationModal from "../components/ConfirmationModal";
 import AddTaskModal from "../components/AddTaskModal";
@@ -17,36 +17,20 @@ export default function Dashboard() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [taskIdToDelete, setTaskIdToDelete] = useState(null);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
   const [expandedTaskId, setExpandedTaskId] = useState(null);
 
-  useEffect(() => {
-    if (!token) {
-      navigate("/");
-    } else {
-      fetchTasks();
-    }
-  }, [token]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [tasks, filter, search]);
-
-  const showMessage = (text, type = "success") => {
+  const showMessage = useCallback((text, type = "success") => {
     setMessage(text);
     setMessageType(type);
     setTimeout(() => {
       setMessage("");
       setMessageType("");
     }, 3000);
-  };
+  }, []);
 
-  const getMessageStyle = () => {
-    return messageType === "success"
-      ? "bg-green-100 text-green-700 border-green-400"
-      : "bg-red-100 text-red-700 border-red-400";
-  };
-
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/taskTrac/task/list", {
@@ -60,14 +44,14 @@ export default function Dashboard() {
       } else {
         showMessage(data.message || "Failed to load tasks", "error");
       }
-    } catch (err) {
+    } catch {
       showMessage("Something went wrong while loading tasks.", "error");
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, showMessage]);
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let tempTasks = [...tasks];
     if (filter === "completed") {
       tempTasks = tempTasks.filter((task) => task.completed);
@@ -80,6 +64,24 @@ export default function Dashboard() {
       );
     }
     setFilteredTasks(tempTasks);
+  }, [tasks, filter, search]);
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/");
+    } else {
+      fetchTasks();
+    }
+  }, [token, navigate, fetchTasks]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  const getMessageStyle = () => {
+    return messageType === "success"
+      ? "bg-green-100 text-green-700 border-green-400"
+      : "bg-red-100 text-red-700 border-red-400";
   };
 
   const handleAddTask = async (taskData) => {
@@ -105,7 +107,7 @@ export default function Dashboard() {
       } else {
         showMessage(data.message || "Failed to add task", "error");
       }
-    } catch (err) {
+    } catch {
       showMessage("Error adding task", "error");
     }
   };
@@ -123,7 +125,40 @@ export default function Dashboard() {
       if (res.ok) {
         fetchTasks();
       }
-    } catch (err) {
+    } catch {
+      showMessage("Error updating task", "error");
+    }
+  };
+
+  const handleEditClick = (task) => {
+    setEditingTask(task);
+    setIsEditTaskModalOpen(true);
+  };
+
+  const handleUpdateTask = async (taskId, taskData) => {
+    try {
+      const res = await fetch(`/api/taskTrac/task/upadte/${taskId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: taskData.title,
+          description: taskData.description,
+          endDate: taskData.endDate,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        fetchTasks();
+        showMessage("Task updated successfully", "success");
+        setIsEditTaskModalOpen(false);
+        setEditingTask(null);
+      } else {
+        showMessage(data.message || "Failed to update task", "error");
+      }
+    } catch {
       showMessage("Error updating task", "error");
     }
   };
@@ -149,7 +184,7 @@ export default function Dashboard() {
       } else {
         showMessage("Failed to delete task", "error");
       }
-    } catch (err) {
+    } catch {
       showMessage("Error deleting task", "error");
     } finally {
       setIsDeleteModalOpen(false);
@@ -232,15 +267,17 @@ export default function Dashboard() {
       ) : (
         <div className="space-y-3">
           {filteredTasks.length > 0 ? (
-            filteredTasks.map((task) => (
-              <div
-                key={task._id}
-                className="bg-white p-3 rounded-lg shadow flex justify-between items-start"
-              >
+            filteredTasks.map((task) => {
+              const taskId = task.id ?? task._id;
+              return (
                 <div
-                  className="flex-1 cursor-pointer"
-                  onClick={() => toggleTaskExpand(task._id)}
+                  key={taskId}
+                  className="bg-white p-3 rounded-lg shadow flex justify-between items-start"
                 >
+                  <div
+                    className="flex-1 cursor-pointer"
+                    onClick={() => toggleTaskExpand(taskId)}
+                  >
                   <h2
                     className={`text-base font-medium ${
                       task.completed && filter !== "completed" ? "line-through text-gray-400" : "text-gray-800"
@@ -260,32 +297,54 @@ export default function Dashboard() {
                       </p>
                     )}
                   </div>
-                  {expandedTaskId === task._id && task.description && (
+                  {expandedTaskId === taskId && task.description && (
                     <p className="mt-1 text-sm text-gray-600">
                       {task.description}
                     </p>
                   )}
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <button
+                      onClick={() => toggleComplete(taskId, task.completed)}
+                      className={`px-3 py-1 rounded-lg text-white min-w-[80px] text-center ${
+                        task.completed
+                          ? "bg-yellow-500 hover:bg-yellow-600"
+                          : "bg-green-500 hover:bg-green-600"
+                      }`}
+                    >
+                      {task.completed ? "Undo" : "Complete"}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(taskId)}
+                      className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => handleEditClick(task)}
+                      className="p-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition"
+                      title="Edit task"
+                      aria-label="Edit task"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLineCap="round"
+                          strokeLineJoin="round"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => toggleComplete(task._id, task.completed)}
-                    className={`px-3 py-1 rounded-lg text-white ${
-                      task.completed
-                        ? "bg-yellow-500 hover:bg-yellow-600"
-                        : "bg-green-500 hover:bg-green-600"
-                    }`}
-                  >
-                    {task.completed ? "Undo" : "Complete"}
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClick(task._id)}
-                    className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <p className="text-gray-500">No tasks found.</p>
           )}
@@ -296,6 +355,21 @@ export default function Dashboard() {
         isOpen={isAddTaskModalOpen}
         onClose={() => setIsAddTaskModalOpen(false)}
         onSave={handleAddTask}
+      />
+
+      <AddTaskModal
+        isOpen={isEditTaskModalOpen}
+        onClose={() => {
+          setIsEditTaskModalOpen(false);
+          setEditingTask(null);
+        }}
+        onSave={(formData) => {
+          if (!editingTask) return;
+          const taskId = editingTask.id ?? editingTask._id;
+          handleUpdateTask(taskId, formData);
+        }}
+        mode="edit"
+        initialTask={editingTask}
       />
 
       <ConfirmationModal

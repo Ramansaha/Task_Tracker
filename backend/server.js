@@ -4,13 +4,13 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
-import routes from './routes/apiRoutes.js'
+import routes from './routes/apiRoutes.js';
 import connectDB from './config/conn.js';
+import { connectPostgres } from './config/postgresConn.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Try root .env first, then fallback to backend/.env
 const rootEnvPath = join(__dirname, '../.env');
 const backendEnvPath = join(__dirname, '.env');
 
@@ -21,6 +21,8 @@ if (existsSync(rootEnvPath)) {
 }
 
 connectDB();
+connectPostgres();
+
 const app = express();
 
 app.use(cors());
@@ -28,7 +30,7 @@ app.use(express.json());
 
 app.use('/api/taskTrac', routes);
 
-const PORT = process.env.PORT || 8000
-app.listen(PORT , ()=> {
-    console.log(`----------------------------- Task_tracker is running on port : ${PORT} ----------------------------------`)
-})
+const PORT = process.env.PORT || 8000;
+app.listen(PORT, () => {
+    console.log(`----------------------------- Task_tracker is running on port : ${PORT} ----------------------------------`);
+});
