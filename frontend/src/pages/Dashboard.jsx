@@ -232,15 +232,17 @@ export default function Dashboard() {
       ) : (
         <div className="space-y-3">
           {filteredTasks.length > 0 ? (
-            filteredTasks.map((task) => (
-              <div
-                key={task._id}
-                className="bg-white p-3 rounded-lg shadow flex justify-between items-start"
-              >
+            filteredTasks.map((task) => {
+              const taskId = task.id ?? task._id;
+              return (
                 <div
-                  className="flex-1 cursor-pointer"
-                  onClick={() => toggleTaskExpand(task._id)}
+                  key={taskId}
+                  className="bg-white p-3 rounded-lg shadow flex justify-between items-start"
                 >
+                  <div
+                    className="flex-1 cursor-pointer"
+                    onClick={() => toggleTaskExpand(taskId)}
+                  >
                   <h2
                     className={`text-base font-medium ${
                       task.completed && filter !== "completed" ? "line-through text-gray-400" : "text-gray-800"
@@ -260,32 +262,33 @@ export default function Dashboard() {
                       </p>
                     )}
                   </div>
-                  {expandedTaskId === task._id && task.description && (
+                  {expandedTaskId === taskId && task.description && (
                     <p className="mt-1 text-sm text-gray-600">
                       {task.description}
                     </p>
                   )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => toggleComplete(taskId, task.completed)}
+                      className={`px-3 py-1 rounded-lg text-white ${
+                        task.completed
+                          ? "bg-yellow-500 hover:bg-yellow-600"
+                          : "bg-green-500 hover:bg-green-600"
+                      }`}
+                    >
+                      {task.completed ? "Undo" : "Complete"}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(taskId)}
+                      className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => toggleComplete(task._id, task.completed)}
-                    className={`px-3 py-1 rounded-lg text-white ${
-                      task.completed
-                        ? "bg-yellow-500 hover:bg-yellow-600"
-                        : "bg-green-500 hover:bg-green-600"
-                    }`}
-                  >
-                    {task.completed ? "Undo" : "Complete"}
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClick(task._id)}
-                    className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <p className="text-gray-500">No tasks found.</p>
           )}
