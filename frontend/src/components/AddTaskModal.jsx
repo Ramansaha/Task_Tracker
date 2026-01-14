@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-export default function AddTaskModal({ isOpen, onClose, onSave }) {
+export default function AddTaskModal({ isOpen, onClose, onSave, mode = "create", initialTask = null }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -8,7 +8,21 @@ export default function AddTaskModal({ isOpen, onClose, onSave }) {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    if (mode === "edit" && initialTask) {
+      setTitle(initialTask.title || "");
+      setDescription(initialTask.description || "");
+      const start = initialTask.startDate
+        ? new Date(initialTask.startDate).toISOString().split("T")[0]
+        : "";
+      const end = initialTask.endDate
+        ? new Date(initialTask.endDate).toISOString().split("T")[0]
+        : "";
+      setStartDate(start);
+      setEndDate(end);
+      setErrors({});
+    } else {
       const today = new Date().toISOString().split("T")[0];
       setTitle("");
       setDescription("");
@@ -16,7 +30,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave }) {
       setEndDate("");
       setErrors({});
     }
-  }, [isOpen]);
+  }, [isOpen, mode, initialTask]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -25,9 +39,13 @@ export default function AddTaskModal({ isOpen, onClose, onSave }) {
     if (!title.trim()) {
       newErrors.title = "Title is required";
     }
-    if (!startDate) {
-      newErrors.startDate = "Start date is required";
+
+    if (mode === "create") {
+      if (!startDate) {
+        newErrors.startDate = "Start date is required";
+      }
     }
+
     if (!endDate) {
       newErrors.endDate = "End date is required";
     }
@@ -40,10 +58,17 @@ export default function AddTaskModal({ isOpen, onClose, onSave }) {
       return;
     }
 
-    onSave({ title, description, startDate, endDate });
+    onSave({
+      title: title.trim(),
+      description: description.trim(),
+      startDate,
+      endDate,
+    });
   };
 
   if (!isOpen) return null;
+
+  const isEdit = mode === "edit";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
@@ -53,7 +78,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave }) {
       >
         <div className="p-6">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
-            Create New Task
+            {isEdit ? "Edit Task" : "Create New Task"}
           </h3>
 
           <form onSubmit={handleSubmit}>
@@ -96,10 +121,16 @@ export default function AddTaskModal({ isOpen, onClose, onSave }) {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
+                disabled={isEdit}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-indigo-300 ${
                   errors.startDate ? "border-red-500" : "border-gray-300"
-                }`}
+                } ${isEdit ? "bg-gray-100 cursor-not-allowed" : ""}`}
               />
+              {isEdit && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Start date cannot be changed after creation.
+                </p>
+              )}
               {errors.startDate && (
                 <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>
               )}
@@ -135,7 +166,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave }) {
                 type="submit"
                 className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
               >
-                Create Task
+                {isEdit ? "Save Changes" : "Create Task"}
               </button>
             </div>
           </form>
