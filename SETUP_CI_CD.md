@@ -49,8 +49,7 @@ Go to your GitHub repository and follow these steps:
 2. **Branch name pattern**: `dev`
 3. Enable these settings:
    - ✅ **Require a pull request before merging**
-     - ✅ Require approvals: **1**
-     - ✅ Dismiss stale pull request approvals when new commits are pushed
+     - ❌ **Do NOT check "Require approvals"** (allows you to merge your own PRs)
    - ✅ **Require status checks to pass before merging**
      - ✅ Require branches to be up to date before merging
      - ✅ Status checks: **CI Pipeline** (will appear after first workflow run)
@@ -64,8 +63,7 @@ Go to your GitHub repository and follow these steps:
 2. **Branch name pattern**: `staging`
 3. Enable these settings:
    - ✅ **Require a pull request before merging**
-     - ✅ Require approvals: **1**
-     - ✅ Dismiss stale pull request approvals when new commits are pushed
+     - ❌ **Do NOT check "Require approvals"** (allows you to merge your own PRs)
    - ✅ **Require status checks to pass before merging**
      - ✅ Require branches to be up to date before merging
      - ✅ Status checks: **CI Pipeline**
@@ -81,8 +79,7 @@ Go to your GitHub repository and follow these steps:
 2. **Branch name pattern**: `main`
 3. Enable these settings:
    - ✅ **Require a pull request before merging**
-     - ✅ Require approvals: **1**
-     - ✅ Dismiss stale pull request approvals when new commits are pushed
+     - ❌ **Do NOT check "Require approvals"** (allows you to merge your own PRs)
    - ✅ **Require status checks to pass before merging**
      - ✅ Require branches to be up to date before merging
      - ✅ Status checks: **CI Pipeline**
@@ -91,6 +88,8 @@ Go to your GitHub repository and follow these steps:
    - ✅ **Do not allow force pushes**
    - ✅ **Do not allow deletions**
 4. Click **"Create"**
+
+> **Note for Solo Developers**: Approvals are not required, allowing you to merge your own PRs immediately after CI passes. You can enable approvals later when you add team members.
 
 ## Step 5: Test the Workflow
 
@@ -126,5 +125,6 @@ Feature Branch → PR to dev → Review → Merge to dev → Auto-deploy dev
 - **CI Pipeline** runs on GitHub for every PR and push
 - **Branch protection** ensures code quality and prevents direct pushes
 - **Status checks** must pass before merging PRs
-- **Approvals** are required before merging (1 reviewer minimum)
+- **Approvals** are NOT required (solo developer setup - you can merge your own PRs)
+- **Workflow enforcement**: Code must flow through dev → staging → main
 

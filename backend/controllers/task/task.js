@@ -1,7 +1,6 @@
-import Task from "../../models/task/task.js";
+import Task from "../../models/task/taskPostgres.js";
 import * as apiResponse from '../../helper/apiResponse.js';
 
-// Create task
 export const createTask = async (request, response) => {
   try {
     const { title, description, startDate, endDate } = request.body;
@@ -18,7 +17,7 @@ export const createTask = async (request, response) => {
       description: description || "",
       startDate,
       endDate,
-      userId: request.body?.auth?.userId, // from JWT middleware
+      userId: request.body?.auth?.userId?.toString(),
     });
 
     return apiResponse.successResponseWithData(
@@ -26,63 +25,101 @@ export const createTask = async (request, response) => {
       "Task created successfully",
       newTask
     );
-  } catch {
+  } catch (err) {
+    console.error('Create task error:', err);
     return apiResponse.errorResponse(response, "Failed to create task");
   }
 };
 
-// Get all tasks for logged-in user
 export const getTasks = async (req, res) => {
     try {
-        const tasks = await Task.find({ userId: req.auth.userId });
+        const tasks = await Task.findAll({ 
+          where: { userId: req.auth.userId.toString() },
+          order: [['createdAt', 'DESC']]
+        });
         res.json(tasks);
-    } catch {
+    } catch (err) {
+        console.error('Get tasks error:', err);
         res.status(500).json({ message: "Failed to fetch tasks" });
     }
 };
 
-// Get single task
 export const getTask = async (req, res) => {
     try {
         if (!req.params.id) {
             return res.status(400).json({ message: "Task ID is required" });
         }
-        const task = await Task.findOne({ _id: req.params.id, userId: req.user._id });
+        const task = await Task.findOne({ 
+          where: { 
+            id: req.params.id, 
+            userId: req.auth.userId.toString() 
+          } 
+        });
         if (!task) return res.status(404).json({ message: "Task not found" });
         res.json(task);
-    } catch {
+    } catch (err) {
+        console.error('Get task error:', err);
         res.status(500).json({ message: "Failed to fetch task" });
     }
 };
 
-// Update task
 export const updateTask = async (req, res) => {
     try {
-        if (!req.params.id || req.body.completed === undefined) {
-            return res.status(400).json({ message: "Task ID and task status are required" });
-        }   
-        const updated = await Task.findOneAndUpdate(
-            { _id: req.params.id, userId: req.body.auth.userId },
-            req.body,
-            { new: true }
+        if (!req.params.id) {
+            return res.status(400).json({ message: "Task ID is required" });
+        }
+        
+        const updateData = {};
+        if (req.body.completed !== undefined) {
+            updateData.completed = req.body.completed;
+        }
+        if (req.body.title !== undefined) {
+            updateData.title = req.body.title;
+        }
+        if (req.body.description !== undefined) {
+            updateData.description = req.body.description;
+        }
+        if (req.body.startDate !== undefined) {
+            updateData.startDate = req.body.startDate;
+        }
+        if (req.body.endDate !== undefined) {
+            updateData.endDate = req.body.endDate;
+        }
+        
+        const [updatedCount] = await Task.update(
+            updateData,
+            { 
+              where: { 
+                id: req.params.id, 
+                userId: req.body.auth.userId.toString() 
+              } 
+            }
         );
-        if (!updated) return res.status(404).json({ message: "Task not found" });
+        if (updatedCount === 0) return res.status(404).json({ message: "Task not found" });
+        
+        const updated = await Task.findByPk(req.params.id);
         res.json(updated);
-    } catch {
+    } catch (err) {
+        console.error('Update task error:', err);
         res.status(500).json({ message: "Failed to update task" });
     }
 };
 
-// Delete task
 export const deleteTask = async (req, res) => {
     try {
         if (!req.params.id) {
             return res.status(400).json({ message: "Task ID is required" });
         }
-        const deleted = await Task.findOneAndDelete({ _id: req.params.id, userId: req.body.auth.userId });
-        if (!deleted) return res.status(404).json({ message: "Task not found" });
+        const deletedCount = await Task.destroy({ 
+          where: { 
+            id: req.params.id, 
+            userId: req.body.auth.userId.toString() 
+          } 
+        });
+        if (deletedCount === 0) return res.status(404).json({ message: "Task not found" });
         res.json({ message: "Task deleted" });
-    } catch {
+    } catch (err) {
+        console.error('Delete task error:', err);
         res.status(500).json({ message: "Failed to delete task" });
     }
 };
