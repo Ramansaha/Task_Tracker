@@ -268,7 +268,7 @@ export default function Dashboard() {
       {message && (() => {
         const styles = getMessageStyle();
         return (
-          <div className="mb-4 flex justify-end">
+          <div className="fixed bottom-4 right-4 z-50 flex justify-end w-full max-w-md">
             <div className={`max-w-md w-full px-4 py-3 rounded-lg flex items-center gap-3 animate-slide-down ${styles.container}`}>
               <div className={`flex-shrink-0 ${styles.icon}`}>
                 {styles.iconSvg}
@@ -444,7 +444,7 @@ export default function Dashboard() {
                           <div className="flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => toggleComplete(taskId, task.completed)}
-                              className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all duration-150 ${
+                              className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all duration-150 w-20 ${
                                 task.completed
                                   ? "bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-300"
                                   : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300"
@@ -454,13 +454,13 @@ export default function Dashboard() {
                             </button>
                             <button
                               onClick={() => handleDeleteClick(taskId)}
-                              className="px-2.5 py-1 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-lg text-xs font-medium transition-all duration-150"
+                              className="px-2.5 py-1 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-lg text-xs font-medium transition-all duration-150 w-16"
                             >
                               Delete
                             </button>
                             <button
                               onClick={() => handleEditClick(task)}
-                              className="p-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 rounded-lg transition-all duration-150"
+                              className="p-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 rounded-lg transition-all duration-150 w-10 flex items-center justify-center"
                               title="Edit task"
                               aria-label="Edit task"
                             >
