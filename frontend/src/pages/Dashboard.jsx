@@ -8,18 +8,19 @@ export default function Dashboard() {
   const token = localStorage.getItem("token");
 
   const [tasks, setTasks] = useState([]);
-  const [filteredTasks, setFilteredTasks] = useState([]);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [pagination, setPagination] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [taskIdToDelete, setTaskIdToDelete] = useState(null);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const [expandedTaskId, setExpandedTaskId] = useState(null);
 
   const showMessage = useCallback((text, type = "success") => {
     setMessage(text);
@@ -30,17 +31,26 @@ export default function Dashboard() {
     }, 3000);
   }, []);
 
-  const fetchTasks = useCallback(async () => {
+  const fetchTasks = useCallback(async (page = 1, filterParam = filter) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/taskTrac/task/list", {
+      const filterQuery = filterParam && filterParam !== 'all' ? `&filter=${filterParam}` : '';
+      const res = await fetch(`/api/taskTrac/task/list?page=${page}&pageSize=${pageSize}${filterQuery}&_t=${Date.now()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        cache: 'no-cache',
       });
       const data = await res.json();
       if (res.ok) {
-        setTasks(data || []);
+        if (data.tasks && data.pagination) {
+          setTasks(data.tasks);
+          setPagination(data.pagination);
+          setCurrentPage(page);
+        } else {
+          setTasks([]);
+          setPagination(null);
+        }
       } else {
         showMessage(data.message || "Failed to load tasks", "error");
       }
@@ -49,34 +59,44 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [token, showMessage]);
+  }, [token, showMessage, pageSize, filter]);
 
-  const applyFilters = useCallback(() => {
-    let tempTasks = [...tasks];
-    if (filter === "completed") {
-      tempTasks = tempTasks.filter((task) => task.completed);
-    } else if (filter === "pending") {
-      tempTasks = tempTasks.filter((task) => !task.completed);
+  const handlePageChange = useCallback((newPage) => {
+    if (newPage >= 1 && (!pagination || newPage <= pagination.totalPages)) {
+      fetchTasks(newPage, filter);
     }
+  }, [fetchTasks, pagination, filter]);
+
+  const handleFilterChange = useCallback((newFilter) => {
+    setFilter(newFilter);
+    setCurrentPage(1);
+    fetchTasks(1, newFilter);
+  }, [fetchTasks]);
+
+  const handleSearchChange = useCallback((value) => {
+    setSearch(value);
+  }, []);
+
+  const getDisplayTasks = useCallback(() => {
+    let displayTasks = [...tasks];
+    
+    // Filter is now handled by backend, but we still apply search client-side
     if (search) {
-      tempTasks = tempTasks.filter((task) =>
+      displayTasks = displayTasks.filter((task) =>
         task.title.toLowerCase().includes(search.toLowerCase())
       );
     }
-    setFilteredTasks(tempTasks);
-  }, [tasks, filter, search]);
+    
+    return displayTasks;
+  }, [tasks, search]);
 
   useEffect(() => {
     if (!token) {
       navigate("/");
     } else {
-      fetchTasks();
+      fetchTasks(1);
     }
   }, [token, navigate, fetchTasks]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [applyFilters]);
 
   const getMessageStyle = () => {
     if (messageType === "success") {
@@ -121,7 +141,7 @@ export default function Dashboard() {
       });
       const data = await res.json();
       if (res.ok) {
-        fetchTasks();
+        fetchTasks(1);
         showMessage(data.message || "Task added successfully", "success");
         setIsAddTaskModalOpen(false);
       } else {
@@ -143,7 +163,7 @@ export default function Dashboard() {
         body: JSON.stringify({ completed: !completed }),
       });
       if (res.ok) {
-        fetchTasks();
+        fetchTasks(currentPage);
       }
     } catch {
       showMessage("Error updating task", "error");
@@ -171,7 +191,7 @@ export default function Dashboard() {
       });
       const data = await res.json();
       if (res.ok) {
-        fetchTasks();
+        fetchTasks(currentPage);
         showMessage("Task updated successfully", "success");
         setIsEditTaskModalOpen(false);
         setEditingTask(null);
@@ -199,7 +219,10 @@ export default function Dashboard() {
         },
       });
       if (res.ok) {
-        fetchTasks();
+        const displayTasks = getDisplayTasks();
+        const shouldGoToPreviousPage = pagination && currentPage > 1 && displayTasks.length === 1;
+        const nextPage = shouldGoToPreviousPage ? currentPage - 1 : currentPage;
+        fetchTasks(nextPage);
         showMessage("Task deleted", "success");
       } else {
         showMessage("Failed to delete task", "error");
@@ -215,10 +238,6 @@ export default function Dashboard() {
   const handleDeleteCancel = () => {
     setIsDeleteModalOpen(false);
     setTaskIdToDelete(null);
-  };
-
-  const toggleTaskExpand = (taskId) => {
-    setExpandedTaskId((prev) => (prev === taskId ? null : taskId));
   };
 
   const handleLogout = () => {
@@ -249,25 +268,27 @@ export default function Dashboard() {
       {message && (() => {
         const styles = getMessageStyle();
         return (
-          <div className={`mb-4 px-4 py-3 rounded-lg flex items-center gap-3 animate-slide-down ${styles.container}`}>
-            <div className={`flex-shrink-0 ${styles.icon}`}>
-              {styles.iconSvg}
+          <div className="mb-4 flex justify-end">
+            <div className={`max-w-md w-full px-4 py-3 rounded-lg flex items-center gap-3 animate-slide-down ${styles.container}`}>
+              <div className={`flex-shrink-0 ${styles.icon}`}>
+                {styles.iconSvg}
+              </div>
+              <p className={`flex-1 font-medium ${styles.text} text-sm`}>
+                {message}
+              </p>
+              <button
+                onClick={() => {
+                  setMessage("");
+                  setMessageType("");
+                }}
+                className={`flex-shrink-0 ${styles.text} hover:opacity-70 transition-opacity`}
+                aria-label="Close"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
             </div>
-            <p className={`flex-1 font-medium ${styles.text}`}>
-              {message}
-            </p>
-            <button
-              onClick={() => {
-                setMessage("");
-                setMessageType("");
-              }}
-              className={`flex-shrink-0 ${styles.text} hover:opacity-70 transition-opacity`}
-              aria-label="Close"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
           </div>
         );
       })()}
@@ -275,19 +296,19 @@ export default function Dashboard() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-2">
           <button
-            onClick={() => setFilter("all")}
+            onClick={() => handleFilterChange("all")}
             className={`px-3 py-1 rounded-lg ${filter === "all" ? "bg-indigo-600 text-white" : "bg-white border"}`}
           >
             All
           </button>
           <button
-            onClick={() => setFilter("completed")}
+            onClick={() => handleFilterChange("completed")}
             className={`px-3 py-1 rounded-lg ${filter === "completed" ? "bg-indigo-600 text-white" : "bg-white border"}`}
           >
             Completed
           </button>
           <button
-            onClick={() => setFilter("pending")}
+            onClick={() => handleFilterChange("pending")}
             className={`px-3 py-1 rounded-lg ${filter === "pending" ? "bg-indigo-600 text-white" : "bg-white border"}`}
           >
             Pending
@@ -297,97 +318,232 @@ export default function Dashboard() {
           type="text"
           placeholder="Search by title..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="px-3 py-1 border rounded-lg"
         />
       </div>
 
       {loading ? (
-        <p className="text-center text-gray-600">Loading...</p>
+        <p className="text-center text-gray-600 py-8">Loading...</p>
       ) : (
-        <div className="space-y-3">
-          {filteredTasks.length > 0 ? (
-            filteredTasks.map((task) => {
-              const taskId = task.id ?? task._id;
-              return (
-                <div
-                  key={taskId}
-                  className="bg-white p-3 rounded-lg shadow flex justify-between items-start"
-                >
-                  <div
-                    className="flex-1 cursor-pointer"
-                    onClick={() => toggleTaskExpand(taskId)}
-                  >
-                  <h2
-                    className={`text-base font-medium ${
-                      task.completed && filter !== "completed" ? "line-through text-gray-400" : "text-gray-800"
-                    }`}
-                  >
-                    {task.title}
-                  </h2>
-                  <div className="flex gap-4 mt-2">
-                    {task.startDate && (
-                      <p className="text-sm text-gray-500">
-                        Start: {new Date(task.startDate).toLocaleDateString()}
-                      </p>
-                    )}
-                    {task.endDate && (
-                      <p className="text-sm text-gray-500">
-                        End: {new Date(task.endDate).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
-                  {expandedTaskId === taskId && task.description && (
-                    <p className="mt-1 text-sm text-gray-600">
-                      {task.description}
-                    </p>
-                  )}
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    <button
-                      onClick={() => toggleComplete(taskId, task.completed)}
-                      className={`px-3 py-1 rounded-lg text-white min-w-[80px] text-center ${
-                        task.completed
-                          ? "bg-yellow-500 hover:bg-yellow-600"
-                          : "bg-green-500 hover:bg-green-600"
-                      }`}
-                    >
-                      {task.completed ? "Undo" : "Complete"}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(taskId)}
-                      className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      onClick={() => handleEditClick(task)}
-                      className="p-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition"
-                      title="Edit task"
-                      aria-label="Edit task"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Title
+                  </th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Start Date
+                  </th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    End Date
+                  </th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {(() => {
+                  const displayTasks = getDisplayTasks();
+                  return displayTasks.length > 0 ? (
+                    displayTasks.map((task) => {
+                    const taskId = task.id ?? task._id;
+                    return (
+                      <tr 
+                        key={taskId} 
+                        className="hover:bg-indigo-50/50 transition-all duration-150 border-b border-gray-100 last:border-0"
                       >
-                        <path
-                          strokeLineCap="round"
-                          strokeLineJoin="round"
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <p className="text-gray-500">No tasks found.</p>
-          )}
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-sm font-medium ${
+                                task.completed && filter !== "completed"
+                                  ? "line-through text-gray-400"
+                                  : "text-gray-900"
+                              }`}
+                            >
+                              {task.title}
+                            </span>
+                            {task.description && (
+                              <div className="relative group">
+                                <svg
+                                  className="w-4 h-4 text-indigo-400 cursor-help hover:text-indigo-600 transition-colors"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                </svg>
+                                <div className="absolute left-0 bottom-full mb-2 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 border border-gray-700">
+                                  <div className="font-medium mb-1">Description:</div>
+                                  {task.description}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className="text-sm text-gray-600 font-medium">
+                            {task.startDate
+                              ? new Date(task.startDate).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })
+                              : "-"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className="text-sm text-gray-600 font-medium">
+                            {task.endDate
+                              ? new Date(task.endDate).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })
+                              : "-"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                              task.completed
+                                ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                                : "bg-amber-100 text-amber-700 border border-amber-200"
+                            }`}
+                          >
+                            {task.completed ? (
+                              <>
+                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                Completed
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                                </svg>
+                                Pending
+                              </>
+                            )}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => toggleComplete(taskId, task.completed)}
+                              className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all duration-150 ${
+                                task.completed
+                                  ? "bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-300"
+                                  : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300"
+                              }`}
+                            >
+                              {task.completed ? "Undo" : "Complete"}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(taskId)}
+                              className="px-2.5 py-1 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-lg text-xs font-medium transition-all duration-150"
+                            >
+                              Delete
+                            </button>
+                            <button
+                              onClick={() => handleEditClick(task)}
+                              className="p-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 rounded-lg transition-all duration-150"
+                              title="Edit task"
+                              aria-label="Edit task"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="px-4 py-8 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          <p className="text-gray-500 font-medium">No tasks found</p>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {pagination && (
+        <div className="flex items-center justify-between mt-4 px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-200">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={!pagination.hasPrev}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+              pagination.hasPrev
+                ? "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+                : "bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200"
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>Previous</span>
+          </button>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">
+              Page <span className="font-semibold text-gray-900">{pagination.currentPage}</span> of <span className="font-semibold text-gray-900">{pagination.totalPages}</span>
+            </span>
+            <span className="text-gray-400">•</span>
+            <span className="text-sm text-gray-500">
+              {pagination.totalItems} {pagination.totalItems === 1 ? 'task' : 'tasks'}
+            </span>
+          </div>
+          
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={!pagination.hasNext}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+              pagination.hasNext
+                ? "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+                : "bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200"
+            }`}
+          >
+            <span>Next</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
       )}
 
