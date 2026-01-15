@@ -1,4 +1,4 @@
-// InsertOne data to the database
+// Create one record
 export const create = async (model, data) => {
     try {
         const result = await model.create(data);
@@ -11,10 +11,10 @@ export const create = async (model, data) => {
     }
 };
 
-// InsertMany data to the database
+// Create many records (bulk insert)
 export const createMany = async (model, dataArray) => {
     try {
-        const result = await model.insertMany(dataArray).lean();
+        const result = await model.bulkCreate(dataArray, { returning: true });
         if (!result || result.length === 0) {
             return { status: false, message: 'Data not created' };
         }
@@ -24,11 +24,14 @@ export const createMany = async (model, dataArray) => {
     }
 };
 
-// FindOne data from the database
-export const getOne = async (model, query, projection = null) => {
+// Find one record
+export const getOne = async (model, where = {}, options = {}) => {
     try {
-        const result = await model.findOne(query, projection).lean();
-        if(!result) {
+        const result = await model.findOne({
+            where,
+            ...options
+        });
+        if (!result) {
             return { status: false, message: 'No data found' };
         }
         return { status: true, data: result };
@@ -37,11 +40,14 @@ export const getOne = async (model, query, projection = null) => {
     }
 };
 
-// FindMany data from the database
-export const getMany = async (model, query = {}, projection = null) => {
+// Find many records
+export const getMany = async (model, where = {}, options = {}) => {
     try {
-        const result = await model.find(query, projection).lean();
-        if(result.length === 0) {
+        const result = await model.findAll({
+            where,
+            ...options
+        });
+        if (result.length === 0) {
             return { status: false, message: 'No data found' };
         }
         return { status: true, data: result };
@@ -50,50 +56,56 @@ export const getMany = async (model, query = {}, projection = null) => {
     }
 };
 
-// Update data from the database
-export const updateOne = async (model, query, updateData) => {
+// Update one record
+export const updateOne = async (model, where, updateData, options = {}) => {
     try {
-        const result = await model.updateOne(query, updateData).lean();
-        if (result.nModified === 0) {
+        const [updatedCount] = await model.update(updateData, {
+            where,
+            ...options
+        });
+        if (updatedCount === 0) {
             return { status: false, message: 'No data updated' };
-        }   
-        return { status: true, data: result };
+        }
+        // Fetch updated record
+        const updated = await model.findOne({ where });
+        return { status: true, data: updated };
     } catch (err) {
         return { status: false, error: err };
     }
 };
 
-// Delete data from the database
-export const deleteOne = async (model, query) => {
+// Delete one record
+export const deleteOne = async (model, where) => {
     try {
-        const result = await model.deleteOne(query).lean();
-        if (result.deletedCount === 0) {
+        const deletedCount = await model.destroy({ where });
+        if (deletedCount === 0) {
             return { status: false, message: 'No data deleted' };
         }
-        return { status: true, data: result };
+        return { status: true, data: { deletedCount } };
     } catch (err) {
         return { status: false, error: err };
     }
 };
 
 // Get paginated records with metadata
-export const getManyPaginated = async (model, query = {}, options = {}) => {
+export const getManyPaginated = async (model, where = {}, options = {}) => {
     try {
         const page = Math.max(1, parseInt(options.page) || 1);
         const pageSize = Math.max(1, Math.min(100, parseInt(options.pageSize) || 10)); // Max 100 items per page
-        const skip = (page - 1) * pageSize;
+        const offset = (page - 1) * pageSize;
         
-        const findOptions = {
-            ...query
+        const queryOptions = {
+            where,
+            limit: pageSize,
+            offset: offset,
+            order: options.order || [['createdAt', 'DESC']],
+            ...(options.attributes && { attributes: options.attributes })
         };
-
-        const projection = options.projection || null;
-        const sort = options.sort || { createdAt: -1 };
 
         // Get total count and data in parallel for better performance
         const [totalItems, data] = await Promise.all([
-            model.countDocuments(findOptions),
-            model.find(findOptions, projection).sort(sort).skip(skip).limit(pageSize).lean()
+            model.count({ where }),
+            model.findAll(queryOptions)
         ]);
 
         const totalPages = Math.ceil(totalItems / pageSize);
@@ -114,3 +126,4 @@ export const getManyPaginated = async (model, query = {}, options = {}) => {
         return { status: false, error: err };
     }
 };
+
