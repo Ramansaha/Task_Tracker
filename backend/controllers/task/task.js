@@ -1,6 +1,6 @@
 import Task from "../../models/task/taskPostgres.js";
 import * as apiResponse from '../../helper/apiResponse.js';
-import { create, getMany, getOne, getManyPaginated, updateOne, deleteOne } from '../../helper/postgres.js';
+import { create, getOne, getManyPaginated, updateOne, deleteOne } from '../../helper/postgres.js';
 
 export const createTask = async (request, response) => {
   try {
