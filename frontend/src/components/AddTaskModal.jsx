@@ -114,10 +114,11 @@ export default function AddTaskModal({ isOpen, onClose, onSave, mode = "create",
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
                 Start Date <span className="text-red-500">*</span>
               </label>
               <input
+                id="startDate"
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
@@ -137,10 +138,11 @@ export default function AddTaskModal({ isOpen, onClose, onSave, mode = "create",
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
                 End Date <span className="text-red-500">*</span>
               </label>
               <input
+                id="endDate"
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
