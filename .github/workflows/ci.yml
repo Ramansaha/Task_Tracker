@@ -270,8 +270,13 @@ jobs:
         run: |
           cd frontend
           if [ -f affected-tests.txt ]; then
-            TEST_FILES=$(cat affected-tests.txt | tr '\n' ' ')
-            npm test -- $TEST_FILES
+            # Filter out setup files and only keep actual test files
+            TEST_FILES=$(cat affected-tests.txt | grep -v 'setup\.js' | grep -v 'setup\.ts' | grep -E '\.(test|spec)\.(js|jsx|ts|tsx)$' | tr '\n' ' ')
+            if [ -z "$TEST_FILES" ]; then
+              npm test
+            else
+              npm test -- $TEST_FILES
+            fi
           else
             npm test
           fi

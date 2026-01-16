@@ -60,8 +60,25 @@ function getChangedFiles() {
 function getAffectedTests(changedFiles) {
   const testFiles = new Set();
   const modules = new Set();
+  let hasSetupFile = false;
+  
+  // Helper to check if file is a setup file
+  const isSetupFile = (file) => {
+    return file.includes('setup.js') || 
+           file.includes('setup.ts') || 
+           file.endsWith('/setup.js') || 
+           file.endsWith('/setup.ts') ||
+           file.includes('/setup.js') ||
+           file.includes('/setup.ts');
+  };
   
   changedFiles.forEach(file => {
+    // If setup file changes, we need to run all tests
+    if (isSetupFile(file)) {
+      hasSetupFile = true;
+      return;
+    }
+    
     // Check each module mapping
     for (const [module, tests] of Object.entries(moduleMapping)) {
       if (file.includes(module)) {
@@ -70,13 +87,19 @@ function getAffectedTests(changedFiles) {
       }
     }
     
-    // Also check for direct test file changes
-    if (file.includes('__tests__') || file.includes('.test.')) {
+    // Also check for direct test file changes (but exclude setup files)
+    if ((file.includes('__tests__') || file.includes('.test.')) && 
+        !isSetupFile(file)) {
       testFiles.add(file);
     }
   });
   
-  return { testFiles: Array.from(testFiles), modules: Array.from(modules) };
+  // If setup file changed, return null to indicate all tests should run
+  if (hasSetupFile) {
+    return { testFiles: [], modules: [], runAll: true };
+  }
+  
+  return { testFiles: Array.from(testFiles), modules: Array.from(modules), runAll: false };
 }
 
 // Main execution
@@ -96,7 +119,13 @@ function main() {
     return;
   }
   
-  const { testFiles, modules } = getAffectedTests(changedFiles);
+  const { testFiles, modules, runAll } = getAffectedTests(changedFiles);
+  
+  // If setup file changed, run all tests
+  if (runAll) {
+    console.log('all');
+    return;
+  }
   
   // Filter by target
   const filteredTests = testFiles.filter(test => {
