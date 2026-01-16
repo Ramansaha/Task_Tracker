@@ -30,4 +30,22 @@ export default defineConfig([
       }],
     },
   },
+  // Add configuration for test files
+  {
+    files: ['**/__tests__/**/*.{js,jsx}', '**/*.test.{js,jsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        global: 'readonly',
+      },
+    },
+    rules: {
+      'no-unused-vars': ['error', { 
+        varsIgnorePattern: '^[A-Z_]',
+        argsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_'
+      }],
+    },
+  },
 ])

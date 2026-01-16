@@ -7,14 +7,6 @@ const mockApiResponse = {
   errorResponse: jest.fn(),
 };
 
-const mockPostgresHelper = {
-  create: jest.fn(),
-  getManyPaginated: jest.fn(),
-  getOne: jest.fn(),
-  updateOne: jest.fn(),
-  deleteOne: jest.fn(),
-};
-
 const mockTaskModel = {};
 
 // Mock all dependencies - use object with named exports
