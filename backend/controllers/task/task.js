@@ -1,6 +1,7 @@
 import Task from "../../models/task/taskPostgres.js";
 import * as apiResponse from '../../helper/apiResponse.js';
 import { create, getOne, getManyPaginated, updateOne, deleteOne } from '../../helper/postgres.js';
+import { Op } from 'sequelize';
 
 export const createTask = async (request, response) => {
   try {
@@ -52,9 +53,52 @@ export const getTasks = async (req, res) => {
         }
         // If filter is 'all' or not provided, show all tasks (no additional where condition)
 
+        const startDateParam = req.query.startDate;
+        const endDateParam = req.query.endDate;
+        const dateMode = req.query.dateMode;
+
+        if (dateMode !== 'all') {
+            if ((!startDateParam || startDateParam.trim() === '') && (!endDateParam || endDateParam.trim() === '')) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                where.startDate = {
+                    [Op.gte]: today
+                };
+            } else {
+                if (startDateParam && startDateParam.trim() !== '' && endDateParam && endDateParam.trim() !== '') {
+                    const startDate = new Date(startDateParam);
+                    startDate.setHours(0, 0, 0, 0);
+                    const endDate = new Date(endDateParam);
+                    endDate.setHours(23, 59, 59, 999);
+
+                    if (startDate > endDate) {
+                        return res.status(400).json({ 
+                            message: "Start date must be less than or equal to end date" 
+                        });
+                    }
+
+                    where.startDate = {
+                        [Op.between]: [startDate, endDate]
+                    };
+                } else if (startDateParam && startDateParam.trim() !== '') {
+                    const startDate = new Date(startDateParam);
+                    startDate.setHours(0, 0, 0, 0);
+                    where.startDate = {
+                        [Op.gte]: startDate
+                    };
+                } else if (endDateParam && endDateParam.trim() !== '') {
+                    const endDate = new Date(endDateParam);
+                    endDate.setHours(23, 59, 59, 999);
+                    where.startDate = {
+                        [Op.lte]: endDate
+                    };
+                }
+            }
+        }
+
         const page = parseInt(req.query.page) || 1;
         const pageSize = parseInt(req.query.pageSize) || 10;
-        const sortBy = req.query.sortBy || 'createdAt';
+        const sortBy = req.query.sortBy || 'startDate';
         const sortOrder = req.query.sortOrder?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
         const result = await getManyPaginated(Task, where, {
