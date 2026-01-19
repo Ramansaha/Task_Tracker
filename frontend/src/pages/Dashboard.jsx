@@ -10,6 +10,10 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [searchType, setSearchType] = useState("title");
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,11 +35,31 @@ export default function Dashboard() {
     }, 3000);
   }, []);
 
-  const fetchTasks = useCallback(async (page = 1, filterParam = filter) => {
+  const fetchTasks = useCallback(async (page = 1, filterParam = filter, startDateParam = startDate, endDateParam = endDate, searchTypeParam = searchType) => {
     setLoading(true);
     try {
-      const filterQuery = filterParam && filterParam !== 'all' ? `&filter=${filterParam}` : '';
-      const res = await fetch(`/api/taskTrac/task/list?page=${page}&pageSize=${pageSize}${filterQuery}&_t=${Date.now()}`, {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        pageSize: pageSize.toString(),
+        _t: Date.now().toString()
+      });
+
+      if (filterParam && filterParam !== 'all') {
+        params.append('filter', filterParam);
+      }
+
+      if (searchTypeParam === 'dateRange') {
+        if (startDateParam && startDateParam.trim() !== '') {
+          params.append('startDate', startDateParam);
+        }
+        if (endDateParam && endDateParam.trim() !== '') {
+          params.append('endDate', endDateParam);
+        }
+      } else {
+        params.append('dateMode', 'all');
+      }
+
+      const res = await fetch(`/api/taskTrac/task/list?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -59,19 +83,51 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [token, showMessage, pageSize, filter]);
+  }, [token, showMessage, pageSize, filter, startDate, endDate, searchType]);
 
   const handlePageChange = useCallback((newPage) => {
     if (newPage >= 1 && (!pagination || newPage <= pagination.totalPages)) {
-      fetchTasks(newPage, filter);
+      fetchTasks(newPage, filter, startDate, endDate, searchType);
     }
-  }, [fetchTasks, pagination, filter]);
+  }, [fetchTasks, pagination, filter, startDate, endDate, searchType]);
 
   const handleFilterChange = useCallback((newFilter) => {
     setFilter(newFilter);
     setCurrentPage(1);
-    fetchTasks(1, newFilter);
-  }, [fetchTasks]);
+    fetchTasks(1, newFilter, startDate, endDate, searchType);
+  }, [fetchTasks, startDate, endDate, searchType]);
+
+  const handleDateChange = useCallback((newStartDate, newEndDate) => {
+    setCurrentPage(1);
+    const start = newStartDate !== undefined ? newStartDate : startDate;
+    const end = newEndDate !== undefined ? newEndDate : endDate;
+    fetchTasks(1, filter, start, end, searchType);
+  }, [startDate, endDate, filter, fetchTasks, searchType]);
+
+  const handleSearchTypeChange = useCallback((newType) => {
+    setSearchType(newType);
+    setIsFilterMenuOpen(false);
+    setCurrentPage(1);
+    if (newType === 'title') {
+      setStartDate("");
+      setEndDate("");
+      fetchTasks(1, filter, "", "", newType);
+    } else {
+      fetchTasks(1, filter, startDate, endDate, newType);
+    }
+  }, [filter, fetchTasks, startDate, endDate]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isFilterMenuOpen && !event.target.closest('.filter-menu-container')) {
+        setIsFilterMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isFilterMenuOpen]);
 
   const handleSearchChange = useCallback((value) => {
     setSearch(value);
@@ -94,9 +150,10 @@ export default function Dashboard() {
     if (!token) {
       navigate("/");
     } else {
-      fetchTasks(1);
+      fetchTasks(1, filter, startDate, endDate, searchType);
     }
-  }, [token, navigate, fetchTasks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, navigate]);
 
   const getMessageStyle = () => {
     if (messageType === "success") {
@@ -141,7 +198,7 @@ export default function Dashboard() {
       });
       const data = await res.json();
       if (res.ok) {
-        fetchTasks(1);
+        fetchTasks(1, filter, startDate, endDate, searchType);
         showMessage(data.message || "Task added successfully", "success");
         setIsAddTaskModalOpen(false);
       } else {
@@ -163,7 +220,7 @@ export default function Dashboard() {
         body: JSON.stringify({ completed: !completed }),
       });
       if (res.ok) {
-        fetchTasks(currentPage);
+        fetchTasks(currentPage, filter, startDate, endDate, searchType);
       }
     } catch {
       showMessage("Error updating task", "error");
@@ -191,7 +248,7 @@ export default function Dashboard() {
       });
       const data = await res.json();
       if (res.ok) {
-        fetchTasks(currentPage);
+        fetchTasks(currentPage, filter, startDate, endDate, searchType);
         showMessage("Task updated successfully", "success");
         setIsEditTaskModalOpen(false);
         setEditingTask(null);
@@ -222,7 +279,7 @@ export default function Dashboard() {
         const displayTasks = getDisplayTasks();
         const shouldGoToPreviousPage = pagination && currentPage > 1 && displayTasks.length === 1;
         const nextPage = shouldGoToPreviousPage ? currentPage - 1 : currentPage;
-        fetchTasks(nextPage);
+        fetchTasks(nextPage, filter, startDate, endDate, searchType);
         showMessage("Task deleted", "success");
       } else {
         showMessage("Failed to delete task", "error");
@@ -293,8 +350,8 @@ export default function Dashboard() {
         );
       })()}
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex gap-2">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => handleFilterChange("all")}
             className={`px-3 py-1 rounded-lg ${filter === "all" ? "bg-indigo-600 text-white" : "bg-white border"}`}
@@ -314,13 +371,80 @@ export default function Dashboard() {
             Pending
           </button>
         </div>
-        <input
-          type="text"
-          placeholder="Search by title..."
-          value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="px-3 py-1 border rounded-lg"
-        />
+
+        <div className="flex items-center gap-2 filter-menu-container relative">
+          {searchType === "title" ? (
+            <input
+              type="text"
+              placeholder="Search by title..."
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="px-3 py-1 border rounded-lg"
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  const newStartDate = e.target.value;
+                  setStartDate(newStartDate);
+                  if (newStartDate && (!endDate || newStartDate <= endDate)) {
+                    setTimeout(() => handleDateChange(newStartDate, endDate), 100);
+                  }
+                }}
+                className="px-3 py-1 border rounded-lg text-sm"
+                placeholder="Start date"
+              />
+              <span className="text-gray-500">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  const newEndDate = e.target.value;
+                  setEndDate(newEndDate);
+                  if (newEndDate && startDate && startDate <= newEndDate) {
+                    setTimeout(() => handleDateChange(startDate, newEndDate), 100);
+                  }
+                }}
+                min={startDate || undefined}
+                className="px-3 py-1 border rounded-lg text-sm"
+                placeholder="End date"
+              />
+            </div>
+          )}
+          
+          <button
+            onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+            title="Filter options"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+          </button>
+
+          {isFilterMenuOpen && (
+            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[150px]">
+              <button
+                onClick={() => handleSearchTypeChange("title")}
+                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 first:rounded-t-lg ${
+                  searchType === "title" ? "bg-indigo-50 text-indigo-700 font-medium" : "text-gray-700"
+                }`}
+              >
+                Title
+              </button>
+              <button
+                onClick={() => handleSearchTypeChange("dateRange")}
+                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 last:rounded-b-lg ${
+                  searchType === "dateRange" ? "bg-indigo-50 text-indigo-700 font-medium" : "text-gray-700"
+                }`}
+              >
+                Date Range
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {loading ? (
