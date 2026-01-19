@@ -57,41 +57,42 @@ export const getTasks = async (req, res) => {
         const endDateParam = req.query.endDate;
         const dateMode = req.query.dateMode;
 
-        if (dateMode === 'all') {
-        } else if ((!startDateParam || startDateParam.trim() === '') && (!endDateParam || endDateParam.trim() === '')) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            where.startDate = {
-                [Op.gte]: today
-            };
-        } else {
-            if (startDateParam && startDateParam.trim() !== '' && endDateParam && endDateParam.trim() !== '') {
-                const startDate = new Date(startDateParam);
-                startDate.setHours(0, 0, 0, 0);
-                const endDate = new Date(endDateParam);
-                endDate.setHours(23, 59, 59, 999);
+        if (dateMode !== 'all') {
+            if ((!startDateParam || startDateParam.trim() === '') && (!endDateParam || endDateParam.trim() === '')) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                where.startDate = {
+                    [Op.gte]: today
+                };
+            } else {
+                if (startDateParam && startDateParam.trim() !== '' && endDateParam && endDateParam.trim() !== '') {
+                    const startDate = new Date(startDateParam);
+                    startDate.setHours(0, 0, 0, 0);
+                    const endDate = new Date(endDateParam);
+                    endDate.setHours(23, 59, 59, 999);
 
-                if (startDate > endDate) {
-                    return res.status(400).json({ 
-                        message: "Start date must be less than or equal to end date" 
-                    });
+                    if (startDate > endDate) {
+                        return res.status(400).json({ 
+                            message: "Start date must be less than or equal to end date" 
+                        });
+                    }
+
+                    where.startDate = {
+                        [Op.between]: [startDate, endDate]
+                    };
+                } else if (startDateParam && startDateParam.trim() !== '') {
+                    const startDate = new Date(startDateParam);
+                    startDate.setHours(0, 0, 0, 0);
+                    where.startDate = {
+                        [Op.gte]: startDate
+                    };
+                } else if (endDateParam && endDateParam.trim() !== '') {
+                    const endDate = new Date(endDateParam);
+                    endDate.setHours(23, 59, 59, 999);
+                    where.startDate = {
+                        [Op.lte]: endDate
+                    };
                 }
-
-                where.startDate = {
-                    [Op.between]: [startDate, endDate]
-                };
-            } else if (startDateParam && startDateParam.trim() !== '') {
-                const startDate = new Date(startDateParam);
-                startDate.setHours(0, 0, 0, 0);
-                where.startDate = {
-                    [Op.gte]: startDate
-                };
-            } else if (endDateParam && endDateParam.trim() !== '') {
-                const endDate = new Date(endDateParam);
-                endDate.setHours(23, 59, 59, 999);
-                where.startDate = {
-                    [Op.lte]: endDate
-                };
             }
         }
 
